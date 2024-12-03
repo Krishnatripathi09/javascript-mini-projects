@@ -62,14 +62,37 @@ function buttons() {
 }
 
 // Uses fetch to utilize the API and sends the JSON data to the testData function
+
+/* Enhanced the code to differentiate between network and data errors*/
+/*Added console for Detailed console logs for developers*/
+/*Added Retry button for better UX if any error Occurs */
+/*Provides detailed, user-friendly messages for the type of error that occurs if any*/
+/* Instead of alert enhanced the UI to show error message directly within the UI in a non-disruptive way. 
+To test this please turn off the internet and try starting a quiz it will show error message in UI "Oops! 
+Something went wrong: Failed to fetch" or depending on error */
 function createQuestions(numQ, diff, cat) {
     let url = `https://opentdb.com/api.php?amount=${numQ}&type=multiple${diff}${cat}`;
     fetch(url)
-        .then((response) => response.json())
-        .then((responseJson) => testData(responseJson, numQ, diff, cat))
-        .catch((error) => alert(error));
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network error: ${response.status} - ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(responseJson => {
+            if (responseJson.response_code !== 0) {
+                throw new Error('No questions found for the selected criteria. Please try changing the settings.');
+            }
+            testData(responseJson, numQ, diff, cat);
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error.message);
+            $('.box').html(`
+                <p class="error-message">Oops! Something went wrong: ${error.message}</p>
+                <button id="retry" onclick="restartQuiz()">Try Again</button>
+            `);
+        });
 }
-
 // This makes sure the API has enough questions for requested specifications
 function testData(data, numQ, diff, cat) {
     if (data.response_code === 0) {
